@@ -17,14 +17,10 @@ def push():
 	outs, errs = proc.communicate()
 	errorMsg = '/bin/sh: 1: cannot create /dev/%s: No such device or address\n' % rfcomm
 
-	if (errs != errorMsg):
-		import setState
-		setState.changeState()
-	else:
-		if (connectProblemNr < 5):
-			connectProblemNr += 1
-			subprocess.call("python3 /home/pi/bin/blue.py &", shell=True)
-			time.sleep(5)
-			push()
+	if (errs == errorMsg and connectProblemNr < 5):
+		connectProblemNr += 1
+		subprocess.call("python3 /home/pi/bin/blue.py &", shell=True)
+		time.sleep(5)
+		push()
 
 push()
