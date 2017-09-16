@@ -7,10 +7,10 @@ var Promise = require('promise');
 var pythonShell = require('python-shell');
 
 var servoOptions = {
-  mode: 'text',
-  pythonPath: '/usr/bin/python',
-  pythonOptions: ['-u'],
-  scriptPath: 'bin'
+  mode: "text",
+  pythonPath: "/usr/bin/python",
+  pythonOptions: ["-u"],
+  scriptPath: __dirname + "/bin"
 };
 
 function press () {
