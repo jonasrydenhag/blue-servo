@@ -9,12 +9,10 @@ var writeCharacteristicUUID = "6e400002b5a3f393e0a9e50e24dcca9e";
 var notifyCharacteristicUUID = "6e400003b5a3f393e0a9e50e24dcca9e";
 
 var peripheral;
-var writeCharacteristic;
-var readCharacteristic;
 
 noble.on('stateChange', function(state) {
   if (state === 'poweredOn') {
-    noble.startScanning([serviceUUID], false);
+    startScanning();
   } else {
     noble.stopScanning();
   }
@@ -34,12 +32,19 @@ noble.on('discover', function(foundPeripheral) {
   }
 });
 
+function startScanning() {
+  noble.startScanning([serviceUUID], false);
+}
+
 function connect(peripheral) {
 
   peripheral.connect(function(error) {
     if (error) {
       debug(error);
     }
+
+    var writeCharacteristic;
+    var readCharacteristic;
 
     var characteristicUUIDs = [writeCharacteristicUUID, notifyCharacteristicUUID];
 
@@ -55,8 +60,10 @@ function connect(peripheral) {
               readCharacteristic = characteristic;
             }
 
+            // Wait until read is initialized before starting write
             if (writeCharacteristic && readCharacteristic) {
-              initWrite(writeCharacteristic, readCharacteristic);
+              initRead(readCharacteristic);
+              initWrite(writeCharacteristic);
             }
           });
         });
@@ -65,41 +72,55 @@ function connect(peripheral) {
   });
 }
 
-
-
-function initWrite(writeCharacteristic, readCharacteristic) {
+function initWrite(characteristic) {
   var data = Buffer.from('!S0');
 
-  read(readCharacteristic);
-
-  writeCharacteristic.write(data, false, function (error) {
+  characteristic.write(data, false, function (error) {
     if (error) {
       debug(error);
-    } else {
+      reconnect();
     }
   });
 }
 
-function read(characteristic) {
-  characteristic.read(function(error, data) {
+function initRead(characteristic) {
+  characteristic.on('read', function(data) {
+    readData(data);
+  });
+
+  characteristic.subscribe(function(error) {
     if (error) {
       debug(error);
-    } else {
-      var state = parseInt(data.toString('utf8', 2,3));
-
-      if (state === 0) {
-        debug('Servo is off');
-      } else if (state === 1) {
-        debug('Servo is on');
-      } else {
-        debug('Servo state is unavailable');
-      }
+      reconnect();
     }
   });
 }
 
-process.on('SIGINT', function () {
+function readData(data) {
+  var state = parseInt(data.toString('utf8', 2,3));
+
+  if (state === 0) {
+    debug('Servo is off');
+  } else if (state === 1) {
+    debug('Servo is on');
+  } else {
+    debug('Servo state is unavailable');
+  }
+}
+
+function reconnect() {
+  disconnect();
+  setTimeout(function () {
+    startScanning();
+  }, 1000);
+}
+
+function disconnect() {
   if (peripheral !== null) {
     peripheral.disconnect();
   }
+}
+
+process.on('SIGINT', function () {
+  disconnect();
 });
