@@ -60,7 +60,7 @@ function connect(peripheral) {
               readCharacteristic = characteristic;
             }
 
-            // Wait until read is initialized before starting write
+            // Wait until read is found before starting write
             if (writeCharacteristic && readCharacteristic) {
               initRead(readCharacteristic);
               initWrite(writeCharacteristic);
