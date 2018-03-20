@@ -100,7 +100,8 @@ function initWrite(characteristic) {
 
 function initRead(characteristic) {
   characteristic.on('read', function(data) {
-    readData(data);
+    var state = extractStateFromData(data);
+    storage.push(state);
   });
 
   characteristic.subscribe(function(error) {
@@ -111,15 +112,15 @@ function initRead(characteristic) {
   });
 }
 
-function readData(data) {
+function extractStateFromData(data) {
   var state = parseInt(data.toString('utf8', 2,3));
 
   if (state === 0) {
-    debug('Servo is off');
+    return "off"
   } else if (state === 1) {
-    debug('Servo is on');
+    return "on";
   } else {
-    debug('Servo state is unavailable');
+    debug("Servo state is unknown: " + state);
   }
 }
 
