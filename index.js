@@ -75,27 +75,41 @@ function connect(peripheral) {
 
 function initWrite(characteristic) {
   storage.queue(function (state) {
-      if (state === null) {
-        return;
-      }
+    if (state === null) {
+      return;
+    }
 
-      var data;
-
-      if (state === 'on') {
-        data = Buffer.from('!S1');
-      } else if (state === 'off') {
-        data = Buffer.from('!S0');
-      } else {
-        debug("Wrong state " + state);
-      }
-
-      characteristic.write(data, false, function (error) {
-        if (error) {
-          debug(error);
-          reconnect();
+    storage.state()
+      .then(function (currentState) {
+        if (state === currentState) {
+          return;
         }
+
+        writeState(characteristic, state);
       })
+      .catch(function (ex) {
+        debug(ex);
+      });
     });
+}
+
+function writeState(characteristic, state) {
+    var data;
+
+    if (state === 'on') {
+      data = Buffer.from('!S1');
+    } else if (state === 'off') {
+      data = Buffer.from('!S0');
+    } else {
+      debug("Wrong state " + state);
+    }
+
+    characteristic.write(data, false, function (error) {
+      if (error) {
+        debug(error);
+        reconnect();
+      }
+    })
 }
 
 function initRead(characteristic) {
