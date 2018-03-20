@@ -146,7 +146,7 @@ function reconnect() {
 }
 
 function disconnect() {
-  if (peripheral !== null) {
+  if (peripheral) {
     peripheral.disconnect();
   }
 }
