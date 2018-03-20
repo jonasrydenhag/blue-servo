@@ -2,6 +2,7 @@
 
 var debug = require('debug')('blueServo');
 var noble = require('noble');
+var storage = require('./lib/storage');
 
 var peripheralIdOrAddress = 'address';
 var serviceUUID = "6e400001b5a3f393e0a9e50e24dcca9e";
@@ -73,14 +74,28 @@ function connect(peripheral) {
 }
 
 function initWrite(characteristic) {
-  var data = Buffer.from('!S0');
+  storage.queue(function (state) {
+      if (state === null) {
+        return;
+      }
 
-  characteristic.write(data, false, function (error) {
-    if (error) {
-      debug(error);
-      reconnect();
-    }
-  });
+      var data;
+
+      if (state === 'on') {
+        data = Buffer.from('!S1');
+      } else if (state === 'off') {
+        data = Buffer.from('!S0');
+      } else {
+        debug("Wrong state " + state);
+      }
+
+      characteristic.write(data, false, function (error) {
+        if (error) {
+          debug(error);
+          reconnect();
+        }
+      })
+    });
 }
 
 function initRead(characteristic) {
