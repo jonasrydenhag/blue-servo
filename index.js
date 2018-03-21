@@ -1,10 +1,11 @@
 "use strict";
 
+var config = require('./config.json');
 var debug = require('debug')('blueServo');
 var noble = require('noble');
 var storage = require('./lib/storage');
 
-var peripheralIdOrAddress = 'address';
+var peripheralIdOrAddress = config.peripheralId;
 var serviceUUID = "6e400001b5a3f393e0a9e50e24dcca9e";
 var writeCharacteristicUUID = "6e400002b5a3f393e0a9e50e24dcca9e";
 var notifyCharacteristicUUID = "6e400003b5a3f393e0a9e50e24dcca9e";
