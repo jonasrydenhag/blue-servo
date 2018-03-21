@@ -4,33 +4,58 @@
 
 var debug = require('debug')('blueServo');
 var Promise = require('promise');
-var pythonShell = require('python-shell');
+var storage = require('./lib/storage');
 
-var servoOptions = {
-  mode: "text",
-  pythonPath: "/usr/bin/python",
-  pythonOptions: ["-u"],
-  scriptPath: __dirname + "/bin"
-};
+function on () {
+  return changeState("on");
+}
 
-function press () {
+function off () {
+  return changeState("off");
+}
+
+function changeState (state) {
   return new Promise(function (resolve, reject) {
-    pythonShell.run('blueServo.py', servoOptions, function (err) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
+    if (state !== "on" && state !== "off") {
+      throw new Error("Invalid state: " + state);
+    }
+
+    storage.state()
+      .then(function (currentState) {
+        if (state === currentState) {
+          resolve(state);
+        } else {
+          listenToNewState(resolve, reject);
+
+          storage.pushQueue(state)
+        }
+      })
+      .catch(function (ex) {
+        reject(ex);
+      });
   });
 }
 
+function listenToNewState(resolve, reject) {
+  storage.newState()
+    .then(function (state) {
+      resolve(state);
+    })
+    .catch(function (ex) {
+      reject(ex);
+    });
+}
+
 (function(){
-  module.exports.press = press;
+  module.exports.on = on;
+  module.exports.off = off;
 
   if (module.parent === null) {
-    press()
-      .then(function () {
+    var state = process.argv[2];
+
+    changeState(state)
+      .then(function (newState) {
+        debug(newState);
         process.exit();
       })
       .catch(function (ex) {
