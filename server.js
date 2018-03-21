@@ -80,21 +80,6 @@ function initWrite(characteristic) {
       return;
     }
 
-    storage.state()
-      .then(function (currentState) {
-        if (state === currentState) {
-          return;
-        }
-
-        writeState(characteristic, state);
-      })
-      .catch(function (ex) {
-        debug(ex);
-      });
-    });
-}
-
-function writeState(characteristic, state) {
     var data;
 
     if (state === 'on') {
@@ -111,6 +96,7 @@ function writeState(characteristic, state) {
         reconnect();
       }
     })
+  });
 }
 
 function initRead(characteristic) {
