@@ -31,7 +31,7 @@ function changeState (state) {
         } else {
           listenToNewState(resolve, reject);
 
-          storage.pushQueue(state)
+          storage.pushQueue(state);
         }
       })
       .catch(function (ex) {
