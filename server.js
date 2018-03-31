@@ -26,8 +26,8 @@ noble.on('discover', function(foundPeripheral) {
 
     peripheral = foundPeripheral;
 
-    peripheral.on('disconnect', function() {
-      process.exit(0);
+    peripheral.once('disconnect', function() {
+      reconnect();
     });
 
     connect(peripheral);
@@ -128,6 +128,7 @@ function extractStateFromData(data) {
 function reconnect() {
   disconnect();
   setTimeout(function () {
+    debug("Reconnects");
     startScanning();
   }, 1000);
 }
