@@ -34,6 +34,10 @@ function startScanning() {
 }
 
 function connect(peripheral, callback) {
+  process.on('SIGINT', function () {
+    disconnect(peripheral);
+  });
+
   peripheral.connect(function(error) {
     if (error) {
       debug(error);
@@ -126,7 +130,7 @@ function initRead(characteristic, callback) {
 function read(data) {
   debug("Read data", data);
   var state = extractStateFromData(data);
-  debug('Read state', state);
+  debug("Read state", state);
   storage.push(state);
 }
 
@@ -145,7 +149,3 @@ function extractStateFromData(data) {
 function disconnect(peripheral) {
   peripheral.disconnect();
 }
-
-process.on('SIGINT', function () {
-  disconnect();
-});
