@@ -76,7 +76,6 @@ function connect(peripheral) {
 
               var characteristicsTimeout = setTimeout(function () {
                 reject("Desired characteristics not found before timeout " + timeout);
-                stopScanning();
               }, timeout);
             }
 
