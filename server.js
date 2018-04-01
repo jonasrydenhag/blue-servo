@@ -120,9 +120,10 @@ function listenToQueue(peripheral) {
 
     connect(peripheral)
       .then(function (chars) {
-        initRead(chars.readCharacteristic, function () {
-          disconnect(peripheral);
-        });
+        initRead(chars.readCharacteristic)
+          .finally(function () {
+            disconnect(peripheral);
+          });
         write(state, chars.writeCharacteristic);
       })
       .catch(function (ex) {
@@ -150,11 +151,15 @@ function write(state, characteristic) {
   })
 }
 
-function initRead(characteristic, callback) {
+function initRead(characteristic) {
   debug("Starts listening to read");
-  characteristic.once('read', function(data) {
-    read(data);
-    callback();
+
+  var readPromise = new Promise(function (resolve, reject) {
+    characteristic.once('read', function(data) {
+      read(data)
+        .then(resolve)
+        .catch(reject);
+    });
   });
 
   characteristic.subscribe(function(error) {
@@ -162,13 +167,19 @@ function initRead(characteristic, callback) {
       debug(error);
     }
   });
+
+  return readPromise;
 }
 
 function read(data) {
-  debug("Read data", data);
-  var state = extractStateFromData(data);
-  debug("Read state", state);
-  storage.push(state);
+  return new Promise(function (resolve) {
+    debug("Read data", data);
+    var state = extractStateFromData(data);
+    debug("Read state", state);
+
+    resolve(state);
+    storage.push(state);
+  });
 }
 
 function extractStateFromData(data) {
