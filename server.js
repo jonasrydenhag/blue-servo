@@ -123,10 +123,12 @@ function listenToQueue(peripheral) {
           .finally(function () {
             disconnect(peripheral);
           });
+
         write(state, chars.writeCharacteristic);
       })
       .catch(function (ex) {
         debug("Connection failed with: ", ex);
+        disconnect(peripheral);
       });
   });
 }
