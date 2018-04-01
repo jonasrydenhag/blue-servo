@@ -3,12 +3,15 @@
 var config = require('./config.json');
 var debug = require('debug')('blueServo');
 var noble = require('noble');
+var Promise = require('promise');
 var storage = require('./lib/storage');
 
 var peripheralIdOrAddress = config.peripheralId;
 var serviceUUID = "6e400001b5a3f393e0a9e50e24dcca9e";
 var writeCharacteristicUUID = "6e400002b5a3f393e0a9e50e24dcca9e";
 var notifyCharacteristicUUID = "6e400003b5a3f393e0a9e50e24dcca9e";
+
+var currentPeripheral;
 
 noble.on('stateChange', function(state) {
   if (state === 'poweredOn') {
@@ -22,10 +25,14 @@ noble.on('discover', function(foundPeripheral) {
   if (foundPeripheral.id === peripheralIdOrAddress || foundPeripheral.address === peripheralIdOrAddress) {
     noble.stopScanning();
 
-    connect(foundPeripheral, function () {
-      listenToQueue(foundPeripheral);
-      disconnect(foundPeripheral);
-    });
+    connect(foundPeripheral)
+      .catch(function (ex) {
+        debug("Connection failed with: ", ex);
+      })
+      .finally(function () {
+        listenToQueue(foundPeripheral);
+        disconnect(foundPeripheral);
+      });
   }
 });
 
@@ -34,41 +41,67 @@ function startScanning() {
 }
 
 function connect(peripheral, callback) {
-  process.on('SIGINT', function () {
-    disconnect(peripheral);
-  });
+  currentPeripheral = peripheral;
 
-  peripheral.connect(function(error) {
-    if (error) {
-      debug(error);
-    }
+  return new Promise(function (resolve, reject) {
+    peripheral.connect(function (error) {
+      if (error) {
+        reject(error);
+      }
 
-    var writeCharacteristic;
-    var readCharacteristic;
+      var characteristicUUIDs = [writeCharacteristicUUID, notifyCharacteristicUUID];
 
-    var characteristicUUIDs = [writeCharacteristicUUID, notifyCharacteristicUUID];
+      peripheral.discoverServices([serviceUUID], function (error, services) {
+        if (error) {
+          reject(error);
+        }
 
-    peripheral.discoverServices([serviceUUID], function(error, services) {
-      debug("Number of services found " + services.length);
-      services.forEach(function (service) {
-        debug("Found service with UUID " + service.uuid);
-        debug("Found service with name " + service.name);
-        service.discoverCharacteristics(characteristicUUIDs, function(error, characteristics) {
-          debug("Number of characteristics found " + characteristics.length);
-          characteristics.forEach(function(characteristic) {
-            debug("Found characteristic with name " + characteristic.name);
-            if (characteristic.uuid === writeCharacteristicUUID) {
-              writeCharacteristic = characteristic;
+        debug("Number of services found " + services.length);
+        if (services.length < 1) {
+          reject("No services found");
+        }
+        services.forEach(function (service) {
+          debug("Found service with UUID " + service.uuid);
+          debug("Found service with name " + service.name);
+          service.discoverCharacteristics(characteristicUUIDs, function (error, characteristics) {
+            if (error) {
+              reject(error);
             }
 
-            if (characteristic.uuid === notifyCharacteristicUUID) {
-              readCharacteristic = characteristic;
+            debug("Number of characteristics found " + characteristics.length);
+            if (characteristics.length < 1) {
+              reject("No characteristics found");
+            } else {
+              var timeout = 2000;
+
+              var characteristicsTimeout = setTimeout(function () {
+                reject("Desired characteristics not found before timeout " + timeout);
+                stopScanning();
+              }, timeout);
             }
 
-            // Wait until both read and write are found
-            if (writeCharacteristic && readCharacteristic) {
-              callback(writeCharacteristic, readCharacteristic);
-            }
+            var writeCharacteristic;
+            var readCharacteristic;
+
+            characteristics.forEach(function (characteristic) {
+              debug("Found characteristic with name " + characteristic.name);
+              if (characteristic.uuid === writeCharacteristicUUID) {
+                writeCharacteristic = characteristic;
+              }
+
+              if (characteristic.uuid === notifyCharacteristicUUID) {
+                readCharacteristic = characteristic;
+              }
+
+              // Wait until both read and write are found
+              if (writeCharacteristic && readCharacteristic) {
+                clearTimeout(characteristicsTimeout);
+                resolve({
+                  "writeCharacteristic": writeCharacteristic,
+                  "readCharacteristic": readCharacteristic
+                });
+              }
+            });
           });
         });
       });
@@ -85,12 +118,16 @@ function listenToQueue(peripheral) {
 
     debug("Connect to peripheral", peripheral.id);
 
-    connect(peripheral, function (writeCharacteristic, readCharacteristic) {
-      initRead(readCharacteristic, function () {
-        disconnect(peripheral);
+    connect(peripheral)
+      .then(function (chars) {
+        initRead(chars.readCharacteristic, function () {
+          disconnect(peripheral);
+        });
+        write(state, chars.writeCharacteristic);
+      })
+      .catch(function (ex) {
+        debug("Connection failed with: ", ex);
       });
-      write(state, writeCharacteristic);
-    });
   });
 }
 
@@ -149,3 +186,7 @@ function extractStateFromData(data) {
 function disconnect(peripheral) {
   peripheral.disconnect();
 }
+
+process.on('SIGINT', function () {
+  disconnect(currentPeripheral);
+});
