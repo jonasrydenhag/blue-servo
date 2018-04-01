@@ -40,7 +40,7 @@ function startScanning() {
   noble.startScanning([serviceUUID], false);
 }
 
-function connect(peripheral, callback) {
+function connect(peripheral) {
   currentPeripheral = peripheral;
 
   return new Promise(function (resolve, reject) {
