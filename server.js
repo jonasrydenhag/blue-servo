@@ -12,7 +12,7 @@ var notifyCharacteristicUUID = "6e400003b5a3f393e0a9e50e24dcca9e";
 
 var peripheral;
 
-noble.on('stateChange', function(state) {
+noble.once('stateChange', function(state) {
   if (state === 'poweredOn') {
     startScanning();
   } else {
@@ -20,9 +20,10 @@ noble.on('stateChange', function(state) {
   }
 });
 
-noble.on('discover', function(foundPeripheral) {
+function onDiscover(foundPeripheral) {
   if (foundPeripheral.id === peripheralIdOrAddress || foundPeripheral.address === peripheralIdOrAddress) {
     noble.stopScanning();
+    noble.removeListener('discover', onDiscover);
 
     peripheral = foundPeripheral;
 
@@ -32,7 +33,9 @@ noble.on('discover', function(foundPeripheral) {
 
     connect(peripheral);
   }
-});
+}
+
+noble.on('discover', onDiscover);
 
 function startScanning() {
   noble.startScanning([serviceUUID], false);
