@@ -4,7 +4,7 @@
 
 var debug = require('debug')('blueServo');
 var Promise = require('promise');
-var server = require('./server');
+var servo = require('./lib/servo');
 var storage = require('./lib/storage');
 
 function on () {
@@ -33,7 +33,7 @@ function changeState (state) {
           debug("Requested state is same as current", state);
           resolve(state);
         } else {
-          server.changeState(state)
+          servo.changeState(state)
             .then(function (state) {
               debug("State changed to:", state);
               resolve(state);
