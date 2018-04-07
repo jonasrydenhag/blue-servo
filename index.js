@@ -39,6 +39,7 @@ function changeState (state) {
               resolve(state);
             })
             .catch(function (ex) {
+              debug("State change failed:", ex);
               reject(ex);
             });
         }
