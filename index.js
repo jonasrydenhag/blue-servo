@@ -4,6 +4,7 @@
 
 var debug = require('debug')('blueServo');
 var Promise = require('promise');
+var servo = require('./lib/servo');
 var storage = require('./lib/storage');
 
 function on () {
@@ -24,30 +25,29 @@ function changeState (state) {
       throw new Error("Invalid state: " + state);
     }
 
+    debug("Change server state:", state);
+
     currentState()
       .then(function (currentState) {
         if (state === currentState) {
+          debug("Requested state is same as current", state);
           resolve(state);
         } else {
-          listenToNewState(resolve, reject);
-
-          storage.pushQueue(state);
+          servo.changeState(state)
+            .then(function (state) {
+              debug("State changed to:", state);
+              resolve(state);
+            })
+            .catch(function (ex) {
+              debug("State change failed:", ex);
+              reject(ex);
+            });
         }
       })
       .catch(function (ex) {
         reject(ex);
       });
   });
-}
-
-function listenToNewState(resolve, reject) {
-  storage.newState()
-    .then(function (state) {
-      resolve(state);
-    })
-    .catch(function (ex) {
-      reject(ex);
-    });
 }
 
 (function(){
