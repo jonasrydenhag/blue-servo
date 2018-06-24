@@ -26,25 +26,13 @@ function changeState (state) {
     }
 
     debug("Change server state:", state);
-
-    currentState()
-      .then(function (currentState) {
-        if (state === currentState) {
-          debug("Requested state is same as current", state);
-          resolve(state);
-        } else {
-          servo.changeState(state)
-            .then(function (state) {
-              debug("State changed to:", state);
-              resolve(state);
-            })
-            .catch(function (ex) {
-              debug("State change failed:", ex);
-              reject(ex);
-            });
-        }
+    servo.changeState(state)
+      .then(function (state) {
+        debug("State changed to:", state);
+        resolve(state);
       })
       .catch(function (ex) {
+        debug("State change failed:", ex);
         reject(ex);
       });
   });
